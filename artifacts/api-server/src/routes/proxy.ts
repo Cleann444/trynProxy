@@ -113,22 +113,34 @@ function rewriteCss(css: string, finalUrl: string): string {
 }
 
 function buildInterceptScript(originalOrigin: string): string {
-  // Injected verbatim into the page — overrides fetch and XHR so all
-  // network calls from the proxied page are routed through /api/proxy
   return `<script>
 (function(){
   var __OO__ = ${JSON.stringify(originalOrigin)};
   var __PB__ = '/api/proxy';
+  var __WS__ = '/api/proxy/ws';
 
-  function rw(url) {
+  // --- Resolve any URL to absolute, then proxy it ---
+  function rwHttp(url) {
     if (!url || typeof url !== 'string') return url;
     var u = url;
     if (u.startsWith('//')) u = location.protocol + u;
     else if (u.startsWith('/')) u = __OO__ + u;
     else if (!/^https?:/i.test(u)) { try { u = new URL(u, __OO__).href; } catch(e){ return url; } }
-    if (u.startsWith(location.origin + '/api/proxy')) return url; // already proxied
-    if (u.startsWith(location.origin)) return url;               // same-origin (our own assets)
+    if (u.startsWith(location.origin + '/api/proxy')) return url;
+    if (u.startsWith(location.origin)) return url;
     return __PB__ + '?url=' + encodeURIComponent(u);
+  }
+
+  // --- Resolve WebSocket URL and route through our WS proxy ---
+  function rwWs(url) {
+    if (!url || typeof url !== 'string') return url;
+    var u = url;
+    if (u.startsWith('//')) u = 'wss:' + u;
+    else if (u.startsWith('/')) u = __OO__.replace(/^https?/, 'wss') + u;
+    else if (u.startsWith('http://')) u = u.replace('http://', 'ws://');
+    else if (u.startsWith('https://')) u = u.replace('https://', 'wss://');
+    var wsOrigin = location.origin.replace(/^http/, 'ws');
+    return wsOrigin + __WS__ + '?url=' + encodeURIComponent(u);
   }
 
   // --- fetch override ---
@@ -136,10 +148,10 @@ function buildInterceptScript(originalOrigin: string): string {
   window.fetch = function(resource, opts) {
     try {
       if (resource instanceof Request) {
-        var rw2 = rw(resource.url);
+        var rw2 = rwHttp(resource.url);
         if (rw2 !== resource.url) resource = new Request(rw2, resource);
       } else {
-        resource = rw(String(resource));
+        resource = rwHttp(String(resource));
       }
     } catch(e){}
     return _fetch(resource, opts);
@@ -149,11 +161,24 @@ function buildInterceptScript(originalOrigin: string): string {
   var _open = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function() {
     var args = Array.prototype.slice.call(arguments);
-    try { args[1] = rw(String(args[1])); } catch(e){}
+    try { args[1] = rwHttp(String(args[1])); } catch(e){}
     return _open.apply(this, args);
   };
 
-  // --- Notify parent frame of current URL ---
+  // --- WebSocket override ---
+  var _WS = window.WebSocket;
+  function ProxyWebSocket(url, protocols) {
+    var proxied = rwWs(String(url));
+    return protocols ? new _WS(proxied, protocols) : new _WS(proxied);
+  }
+  ProxyWebSocket.prototype = _WS.prototype;
+  ProxyWebSocket.CONNECTING = _WS.CONNECTING;
+  ProxyWebSocket.OPEN = _WS.OPEN;
+  ProxyWebSocket.CLOSING = _WS.CLOSING;
+  ProxyWebSocket.CLOSED = _WS.CLOSED;
+  window.WebSocket = ProxyWebSocket;
+
+  // --- Notify parent frame ---
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({type:'proxy-url', url: __OO__}, '*');
