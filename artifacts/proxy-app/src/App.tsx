@@ -126,6 +126,10 @@ export default function App() {
     setErrorMsg("Failed to load the page. The site may block proxying.");
   };
 
+  const handleNavigate = useCallback((url: string) => {
+    navigate(url);
+  }, [navigate]);
+
   const dark = theme === "dark";
 
   const colors = {

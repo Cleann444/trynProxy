@@ -21,6 +21,29 @@ const BLOCKED_HEADERS = [
   "x-content-type-options",
 ];
 
+// Simple in-memory cache: url -> { html, ts }
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+const cache = new Map<string, { html: string; ts: number }>();
+
+function getCached(url: string): string | null {
+  const entry = cache.get(url);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    cache.delete(url);
+    return null;
+  }
+  return entry.html;
+}
+
+function setCache(url: string, html: string): void {
+  // Keep cache from growing unbounded
+  if (cache.size > 50) {
+    const oldest = [...cache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
+    cache.delete(oldest[0]);
+  }
+  cache.set(url, { html, ts: Date.now() });
+}
+
 function rewriteLinks(html: string, targetUrl: string, proxyBase: string): string {
   const url = new URL(targetUrl);
   const origin = url.origin;
@@ -107,10 +130,13 @@ async function fetchWithCloudflare(targetUrl: string): Promise<string> {
     },
     body: JSON.stringify({
       url: targetUrl,
-      rejectResourceTypes: ["image", "media", "font"],
     }),
     signal: AbortSignal.timeout(30000),
   });
+
+  if (resp.status === 429) {
+    throw new RateLimitError("Cloudflare rate limit reached — please wait a moment and try again.");
+  }
 
   if (!resp.ok) {
     const text = await resp.text();
@@ -126,6 +152,12 @@ async function fetchWithCloudflare(targetUrl: string): Promise<string> {
   return data.result;
 }
 
+class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
 
 router.get("/proxy", async (req, res): Promise<void> => {
   const rawUrl = req.query["url"];
@@ -146,44 +178,56 @@ router.get("/proxy", async (req, res): Promise<void> => {
     return;
   }
 
-  req.log.info({ targetUrl }, "Proxying request");
-
   if (!CF_BROWSER_URL || !CF_API_TOKEN) {
     res.status(503).json({ error: "Cloudflare Browser Rendering is not configured." });
     return;
   }
 
-  let html = "";
-  const finalUrl = targetUrl;
-
-  try {
-    html = await fetchWithCloudflare(targetUrl);
-    req.log.info({ targetUrl }, "Fetched via Cloudflare Browser Rendering");
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    req.log.error({ err, targetUrl }, "Cloudflare fetch failed");
-    res.status(502).json({ error: `Cloudflare failed to load page: ${message}` });
+  // Serve from cache if available
+  const cached = getCached(targetUrl);
+  if (cached) {
+    req.log.info({ targetUrl }, "Serving from cache");
+    res.set("Content-Type", "text/html; charset=utf-8");
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("X-Proxy-Final-Url", targetUrl);
+    res.set("X-Proxy-Engine", "cloudflare-browser");
+    res.set("X-Proxy-Cache", "HIT");
+    for (const h of BLOCKED_HEADERS) res.removeHeader(h);
+    res.send(cached);
     return;
   }
 
-  html = rewriteLinks(html, finalUrl, "/api/proxy");
-  html = injectScript(html, finalUrl);
+  req.log.info({ targetUrl }, "Fetching via Cloudflare Browser Rendering");
+
+  let html = "";
+  try {
+    html = await fetchWithCloudflare(targetUrl);
+  } catch (err) {
+    const isRateLimit = err instanceof RateLimitError;
+    const message = err instanceof Error ? err.message : "Unknown error";
+    req.log.error({ err, targetUrl }, "Cloudflare fetch failed");
+    res.status(isRateLimit ? 429 : 502).json({ error: message });
+    return;
+  }
+
+  html = rewriteLinks(html, targetUrl, "/api/proxy");
+  html = injectScript(html, targetUrl);
+  setCache(targetUrl, html);
 
   res.set("Content-Type", "text/html; charset=utf-8");
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("X-Proxy-Final-Url", finalUrl);
+  res.set("X-Proxy-Final-Url", targetUrl);
   res.set("X-Proxy-Engine", "cloudflare-browser");
-  for (const h of BLOCKED_HEADERS) {
-    res.removeHeader(h);
-  }
+  res.set("X-Proxy-Cache", "MISS");
+  for (const h of BLOCKED_HEADERS) res.removeHeader(h);
   res.send(html);
 });
 
-// Endpoint to check proxy status / config
 router.get("/proxy/status", (_req, res): void => {
   res.json({
     cloudflare: !!CF_BROWSER_URL && !!CF_API_TOKEN,
     accountId: CF_ACCOUNT_ID ? CF_ACCOUNT_ID.slice(0, 6) + "…" : null,
+    cacheSize: cache.size,
   });
 });
 
