@@ -1,0 +1,86 @@
+
+> @workspace/api-server@0.0.0 dev /home/runner/workspace/artifacts/api-server
+> export NODE_ENV=development && pnpm run build && pnpm run start
+
+
+> @workspace/api-server@0.0.0 build /home/runner/workspace/artifacts/api-server
+> node ./build.mjs
+
+
+  [37mdist/[0m[1mindex.mjs[0m                       [33m1.4mb ⚠️[0m
+  [37mdist/[0m[1mpino-worker.mjs[0m               [36m153.4kb[0m
+  [37mdist/[0m[1mpino-file.mjs[0m                 [36m142.1kb[0m
+  [37mdist/[0m[1mpino-pretty.mjs[0m               [36m114.6kb[0m
+  [37mdist/[0m[1mthread-stream-worker.mjs[0m        [36m7.3kb[0m
+  [37mdist/[0m[1mindex.mjs.map[0m                   [36m2.1mb[0m
+  [37mdist/[0m[1mpino-worker.mjs.map[0m           [36m256.9kb[0m
+  [37mdist/[0m[1mpino-file.mjs.map[0m             [36m229.0kb[0m
+  [37mdist/[0m[1mpino-pretty.mjs.map[0m           [36m203.9kb[0m
+  [37mdist/[0m[1mthread-stream-worker.mjs.map[0m   [36m12.0kb[0m
+
+⚡ [32mDone in 715ms[0m
+
+> @workspace/api-server@0.0.0 start /home/runner/workspace/artifacts/api-server
+> node --enable-source-maps ./dist/index.mjs
+
+[16:31:09.454] [32mINFO[39m (3848): [36mServer listening[39m
+    [35mport[39m: 8080
+[16:31:15.965] [32mINFO[39m (3848): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/proxy/status"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[16:31:16.002] [32mINFO[39m (3848): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://example.com"
+[16:31:17.129] [31mERROR[39m (3848): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://example.com"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 400: {\"errors\":[{\"code\":\"unrecognized_keys\",\"keys\":[\"waitUntil\"],\"path\":[\"body\"],\"message\":\"Unrecognized key(s) in object: 'waitUntil'\"}],\"success\":false,\"result\":{}}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 400: {"errors":[{"code":"unrecognized_keys","keys":["waitUntil"],"path":["body"],"message":"Unrecognized key(s) in object: 'waitUntil'"}],"success":false,"result":{}}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:118:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:161:12)
+    }
+[16:31:17.165] [32mINFO[39m (3848): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 1163
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at callback (node:internal/streams/writable:764:21)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[41m[30m ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL [39m[49m [31m@workspace/api-server@0.0.0 dev: `export NODE_ENV=development && pnpm run build && pnpm run start`[39m
+[31mCommand failed with signal "SIGTERM"[39m

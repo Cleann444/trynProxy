@@ -1,0 +1,571 @@
+
+> @workspace/api-server@0.0.0 dev /home/runner/workspace/artifacts/api-server
+> export NODE_ENV=development && pnpm run build && pnpm run start
+
+
+> @workspace/api-server@0.0.0 build /home/runner/workspace/artifacts/api-server
+> node ./build.mjs
+
+
+  [37mdist/[0m[1mindex.mjs[0m                       [33m1.4mb ⚠️[0m
+  [37mdist/[0m[1mpino-worker.mjs[0m               [36m153.4kb[0m
+  [37mdist/[0m[1mpino-file.mjs[0m                 [36m142.1kb[0m
+  [37mdist/[0m[1mpino-pretty.mjs[0m               [36m114.6kb[0m
+  [37mdist/[0m[1mthread-stream-worker.mjs[0m        [36m7.3kb[0m
+  [37mdist/[0m[1mindex.mjs.map[0m                   [36m2.1mb[0m
+  [37mdist/[0m[1mpino-worker.mjs.map[0m           [36m256.9kb[0m
+  [37mdist/[0m[1mpino-file.mjs.map[0m             [36m229.0kb[0m
+  [37mdist/[0m[1mpino-pretty.mjs.map[0m           [36m203.9kb[0m
+  [37mdist/[0m[1mthread-stream-worker.mjs.map[0m   [36m12.0kb[0m
+
+⚡ [32mDone in 171ms[0m
+
+> @workspace/api-server@0.0.0 start /home/runner/workspace/artifacts/api-server
+> node --enable-source-maps ./dist/index.mjs
+
+[16:31:30.219] [32mINFO[39m (3981): [36mServer listening[39m
+    [35mport[39m: 8080
+[16:31:35.922] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://example.com"
+[16:31:39.822] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://example.com"
+[16:31:39.825] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3904
+[16:31:54.332] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:31:57.366] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:31:57.378] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3047
+[16:32:06.592] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:09.069] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:09.079] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2487
+[16:32:14.184] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:14.360] [31mERROR[39m (3981): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 429: {\"success\":false,\"errors\":[{\"code\":2001,\"message\":\"Rate limit exceeded\"}]}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 429: {"success":false,"errors":[{"code":2001,"message":"Rate limit exceeded"}]}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:117:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:160:12)
+    }
+[16:32:14.401] [32mINFO[39m (3981): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 217
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at callback (node:internal/streams/writable:764:21)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[16:32:14.945] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:15.056] [31mERROR[39m (3981): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 429: {\"success\":false,\"errors\":[{\"code\":2001,\"message\":\"Rate limit exceeded\"}]}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 429: {"success":false,"errors":[{"code":2001,"message":"Rate limit exceeded"}]}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:117:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:160:12)
+    }
+[16:32:15.056] [32mINFO[39m (3981): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 111
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[16:32:32.297] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:35.924] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:35.939] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3642
+[16:32:42.682] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:45.684] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://yt.be"
+[16:32:45.695] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3013
+[16:33:00.778] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://wikipedia.org"
+[16:33:03.396] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://wikipedia.org"
+[16:33:03.399] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2621
+[16:33:06.307] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://wikipedia.org"
+[16:33:06.364] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://wikipedia.org"
+[16:33:06.371] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 64
+[16:33:18.987] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://discord.com"
+[16:33:22.606] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://discord.com"
+[16:33:22.611] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3624
+[16:33:32.135] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://discord.com"
+[16:33:35.054] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://discord.com"
+[16:33:35.057] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2922
+[16:33:39.243] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://Snapchat.com"
+[16:33:39.422] [31mERROR[39m (3981): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://Snapchat.com"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 429: {\"success\":false,\"errors\":[{\"code\":2001,\"message\":\"Rate limit exceeded\"}]}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 429: {"success":false,"errors":[{"code":2001,"message":"Rate limit exceeded"}]}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:117:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:160:12)
+    }
+[16:33:39.423] [32mINFO[39m (3981): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 180
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at callback (node:internal/streams/writable:764:21)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[16:33:39.763] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://Snapchat.com"
+[16:33:39.874] [31mERROR[39m (3981): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://Snapchat.com"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 429: {\"success\":false,\"errors\":[{\"code\":2001,\"message\":\"Rate limit exceeded\"}]}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 429: {"success":false,"errors":[{"code":2001,"message":"Rate limit exceeded"}]}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:117:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:160:12)
+    }
+[16:33:39.875] [32mINFO[39m (3981): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 112
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[16:33:51.338] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://x.com"
+[16:33:52.617] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://x.com"
+[16:33:52.622] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1285
+[16:34:00.857] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://x.com"
+[16:34:00.994] [31mERROR[39m (3981): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://x.com"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 429: {\"success\":false,\"errors\":[{\"code\":2001,\"message\":\"Rate limit exceeded\"}]}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 429: {"success":false,"errors":[{"code":2001,"message":"Rate limit exceeded"}]}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:117:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:160:12)
+    }
+[16:34:00.995] [32mINFO[39m (3981): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 138
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[16:34:03.665] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://YouTube.com"
+[16:34:06.444] [32mINFO[39m (3981): [36mFetched via Cloudflare Browser Rendering[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://YouTube.com"
+[16:34:06.455] [32mINFO[39m (3981): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2790
+[16:34:12.936] [32mINFO[39m (3981): [36mProxying request[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://YouTube.com"
+[16:34:13.079] [31mERROR[39m (3981): [36mCloudflare fetch failed[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mtargetUrl[39m: "https://YouTube.com"
+    err: {
+      "type": "Error",
+      "message": "Cloudflare Browser Rendering error 429: {\"success\":false,\"errors\":[{\"code\":2001,\"message\":\"Rate limit exceeded\"}]}",
+      "stack":
+          Error: Cloudflare Browser Rendering error 429: {"success":false,"errors":[{"code":2001,"message":"Rate limit exceeded"}]}
+              at fetchWithCloudflare (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:117:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/routes/proxy.ts:160:12)
+    }
+[16:34:13.079] [32mINFO[39m (3981): [36mrequest errored[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "HEAD",
+      "url": "/api/proxy"
+    }
+    [35mres[39m: {
+      "statusCode": 502
+    }
+    [35mresponseTime[39m: 143
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:520:35)
+              at onFinish (node:_http_outgoing:1026:10)
+              at afterWrite (node:internal/streams/writable:708:5)
+              at afterWriteTick (node:internal/streams/writable:694:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:88:21)
+    }
+[41m[30m ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL [39m[49m [31m@workspace/api-server@0.0.0 dev: `export NODE_ENV=development && pnpm run build && pnpm run start`[39m
+[31mCommand failed with signal "SIGTERM"[39m
