@@ -1,18 +1,13 @@
 # trynProxy - Newest and most advanced proxy, by Cleann.
 
----------------------------------------------------------------------------------------------------------
-|                         ** We are going to start off with a list of features.     **                  |
+|-------------------------------------------------------------------------------------------------------|
+|                            We are going to start off with a list of features.                         |
 ---------------------------------------------------------------------------------------------------------
 | Proxied Websocket Connections.    | Allows Tryn to bypass even the most Secure Filters                |
----------------------------------------------------------------------------------------------------------
 | CloudFlare worker Secondary Proxy.| Tells filters that Tryn's connections are just cloudflare packets.|
----------------------------------------------------------------------------------------------------------
 | <400ms Load times                 | We all know ts is needed.                                         |
----------------------------------------------------------------------------------------------------------
 | Active Development                | Multiple updates arriving soon. Stay tuned.                       |
----------------------------------------------------------------------------------------------------------
 | Lightweight Architecture          | Minimal resource consumption while maintaining full functionality |
----------------------------------------------------------------------------------------------------------
 | Cross-Browser Support             | Works on Chrome, Firefox, Edge, and all major browsers            |
 ---------------------------------------------------------------------------------------------------------
 
