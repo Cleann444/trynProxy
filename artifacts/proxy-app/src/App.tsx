@@ -365,7 +365,6 @@ export default function App() {
             backgroundColor: "#fff",
           }}
           title="Proxy viewer"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
         />
 
         {/* Loading overlay */}

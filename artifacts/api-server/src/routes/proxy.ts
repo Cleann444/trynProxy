@@ -132,11 +132,24 @@ router.get("/proxy", async (req, res): Promise<void> => {
       html = injectedScript + html;
     }
 
+    const BLOCKED_HEADERS = [
+      "x-frame-options",
+      "content-security-policy",
+      "content-security-policy-report-only",
+      "permissions-policy",
+      "cross-origin-embedder-policy",
+      "cross-origin-opener-policy",
+      "cross-origin-resource-policy",
+      "strict-transport-security",
+      "x-content-type-options",
+    ];
+
     res.set("Content-Type", "text/html; charset=utf-8");
     res.set("Access-Control-Allow-Origin", "*");
     res.set("X-Proxy-Final-Url", finalUrl);
-    res.set("X-Frame-Options", "ALLOWALL");
-    res.removeHeader("Content-Security-Policy");
+    for (const h of BLOCKED_HEADERS) {
+      res.removeHeader(h);
+    }
     res.send(html);
   } catch (err: unknown) {
     clearTimeout(timeout);
