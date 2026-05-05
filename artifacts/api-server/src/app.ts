@@ -1,12 +1,11 @@
 import express, { Request, Response } from 'express';
-import pinoHttp from 'pino-http';
+import pino from 'pino-http';
 import proxy from 'express-http-proxy';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Correct way to use pino-http
-const logger = pinoHttp({
+const logger = pino({
   transport: {
     target: 'pino-pretty',
     options: {
@@ -19,12 +18,10 @@ const logger = pinoHttp({
 
 app.use(logger);
 
-// Example route
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'trynProxy is running' });
 });
 
-// Proxy endpoint
 app.use('/proxy', proxy('https://example.com', {
   proxyReqPathResolver: (req: Request) => {
     const targetUrl = req.query.url as string;
