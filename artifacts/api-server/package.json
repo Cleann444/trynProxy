@@ -16,6 +16,7 @@
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "express-http-proxy": "^2.1.2",
     "pino": "^9",
     "pino-http": "^10",
     "ws": "^8.20.0"
