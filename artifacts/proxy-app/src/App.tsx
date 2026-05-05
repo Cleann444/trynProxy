@@ -353,13 +353,7 @@ export default function App() {
               : currentUrl}
           </span>
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>
-            {status === "success" && (
-              engine === "cloudflare-browser"
-                ? "⚡ Cloudflare Browser Rendering"
-                : engine === "direct"
-                ? "↗ Direct fetch"
-                : "Proxied via WebProxy"
-            )}
+            {status === "success" && "⚡ Cloudflare Browser Rendering"}
           </span>
         </div>
       )}

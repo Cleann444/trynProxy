@@ -127,26 +127,6 @@ async function fetchWithCloudflare(targetUrl: string): Promise<string> {
   return data.result;
 }
 
-async function fetchDirect(targetUrl: string): Promise<{ html: string; finalUrl: string }> {
-  const resp = await fetch(targetUrl, {
-    redirect: "follow",
-    headers: {
-      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.5",
-      "Accept-Encoding": "identity",
-      "Cache-Control": "no-cache",
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-
-  const contentType = resp.headers.get("content-type") ?? "text/html";
-  if (!contentType.includes("text/html")) {
-    throw new Error(`Non-HTML content type: ${contentType}`);
-  }
-
-  return { html: await resp.text(), finalUrl: resp.url || targetUrl };
-}
 
 router.get("/proxy", async (req, res): Promise<void> => {
   const rawUrl = req.query["url"];
@@ -169,35 +149,22 @@ router.get("/proxy", async (req, res): Promise<void> => {
 
   req.log.info({ targetUrl }, "Proxying request");
 
-  let html = "";
-  let finalUrl = targetUrl;
-  let usedCloudflare = false;
-
-  // Try Cloudflare Browser Rendering first
-  if (CF_BROWSER_URL && CF_API_TOKEN) {
-    try {
-      html = await fetchWithCloudflare(targetUrl);
-      finalUrl = targetUrl;
-      usedCloudflare = true;
-      req.log.info({ targetUrl }, "Fetched via Cloudflare Browser Rendering");
-    } catch (cfErr) {
-      req.log.warn({ err: cfErr, targetUrl }, "Cloudflare fetch failed, falling back to direct fetch");
-    }
+  if (!CF_BROWSER_URL || !CF_API_TOKEN) {
+    res.status(503).json({ error: "Cloudflare Browser Rendering is not configured." });
+    return;
   }
 
-  // Fallback to direct fetch
-  if (!html) {
-    try {
-      const result = await fetchDirect(targetUrl);
-      html = result.html;
-      finalUrl = result.finalUrl;
-      req.log.info({ targetUrl, finalUrl }, "Fetched via direct fetch");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      req.log.error({ err, targetUrl }, "Direct fetch also failed");
-      res.status(502).json({ error: `Failed to fetch page: ${message}` });
-      return;
-    }
+  let html = "";
+  const finalUrl = targetUrl;
+
+  try {
+    html = await fetchWithCloudflare(targetUrl);
+    req.log.info({ targetUrl }, "Fetched via Cloudflare Browser Rendering");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    req.log.error({ err, targetUrl }, "Cloudflare fetch failed");
+    res.status(502).json({ error: `Cloudflare failed to load page: ${message}` });
+    return;
   }
 
   html = rewriteLinks(html, finalUrl, "/api/proxy");
@@ -206,7 +173,7 @@ router.get("/proxy", async (req, res): Promise<void> => {
   res.set("Content-Type", "text/html; charset=utf-8");
   res.set("Access-Control-Allow-Origin", "*");
   res.set("X-Proxy-Final-Url", finalUrl);
-  res.set("X-Proxy-Engine", usedCloudflare ? "cloudflare-browser" : "direct");
+  res.set("X-Proxy-Engine", "cloudflare-browser");
   for (const h of BLOCKED_HEADERS) {
     res.removeHeader(h);
   }
