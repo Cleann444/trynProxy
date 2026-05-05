@@ -3,11 +3,27 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
+const CF_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const CF_BROWSER_URL = CF_ACCOUNT_ID
+  ? `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/browser-rendering/content`
+  : null;
+
+const BLOCKED_HEADERS = [
+  "x-frame-options",
+  "content-security-policy",
+  "content-security-policy-report-only",
+  "permissions-policy",
+  "cross-origin-embedder-policy",
+  "cross-origin-opener-policy",
+  "cross-origin-resource-policy",
+  "strict-transport-security",
+  "x-content-type-options",
+];
+
 function rewriteLinks(html: string, targetUrl: string, proxyBase: string): string {
   const url = new URL(targetUrl);
   const origin = url.origin;
-  const base = `${url.protocol}//${url.host}`;
-
   const proxyPrefix = `${proxyBase}?url=`;
 
   function toProxiedUrl(href: string): string {
@@ -19,20 +35,27 @@ function rewriteLinks(html: string, targetUrl: string, proxyBase: string): strin
     }
   }
 
+  // Rewrite <a> and <area> href to stay in proxy
   html = html.replace(
     /(<(?:a|area)\s[^>]*\bhref\s*=\s*)(["'])([^"']*)\2/gi,
     (match, pre, quote, href) => {
-      if (href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) {
+      if (
+        href.startsWith("javascript:") ||
+        href.startsWith("mailto:") ||
+        href.startsWith("tel:") ||
+        href.startsWith("#")
+      ) {
         return match;
       }
       return `${pre}${quote}${toProxiedUrl(href)}${quote}`;
     }
   );
 
+  // Resolve relative asset URLs to absolute
   html = html.replace(
-    /(<(?:link|script|img|source|input|track)\s[^>]*\b(?:src|href|action)\s*=\s*)(["'])([^"']*)\2/gi,
+    /(<(?:link|script|img|source|input|track)\s[^>]*\b(?:src|href)\s*=\s*)(["'])([^"']*)\2/gi,
     (match, pre, quote, src) => {
-      if (src.startsWith("data:") || src.startsWith("blob:")) return match;
+      if (src.startsWith("data:") || src.startsWith("blob:") || src.startsWith("http")) return match;
       try {
         const absolute = new URL(src, targetUrl).href;
         return `${pre}${quote}${absolute}${quote}`;
@@ -42,6 +65,7 @@ function rewriteLinks(html: string, targetUrl: string, proxyBase: string): strin
     }
   );
 
+  // Rewrite form actions
   html = html.replace(
     /(<form\s[^>]*\baction\s*=\s*)(["'])([^"']*)\2/gi,
     (match, pre, quote, action) => {
@@ -54,11 +78,74 @@ function rewriteLinks(html: string, targetUrl: string, proxyBase: string): strin
     }
   );
 
+  // Inject base tag if missing
   if (!/<base\s/i.test(html)) {
     html = html.replace(/(<head[^>]*>)/i, `$1<base href="${origin}/">`);
   }
 
   return html;
+}
+
+function injectScript(html: string, finalUrl: string): string {
+  const script = `<script>(function(){if(window.parent&&window.parent!==window){window.parent.postMessage({type:'proxy-url',url:${JSON.stringify(finalUrl)}},'*');}})();</script>`;
+  if (/<\/head>/i.test(html)) {
+    return html.replace(/(<\/head>)/i, script + "$1");
+  }
+  return script + html;
+}
+
+async function fetchWithCloudflare(targetUrl: string): Promise<string> {
+  if (!CF_BROWSER_URL || !CF_API_TOKEN) {
+    throw new Error("Cloudflare not configured");
+  }
+
+  const resp = await fetch(CF_BROWSER_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${CF_API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      url: targetUrl,
+      rejectResourceTypes: ["image", "media", "font"],
+      waitUntil: "networkidle0",
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Cloudflare Browser Rendering error ${resp.status}: ${text}`);
+  }
+
+  const data = await resp.json() as { success: boolean; result?: string; errors?: { message: string }[] };
+  if (!data.success || typeof data.result !== "string") {
+    const errMsg = data.errors?.map((e) => e.message).join(", ") ?? "Unknown error";
+    throw new Error(`Cloudflare returned failure: ${errMsg}`);
+  }
+
+  return data.result;
+}
+
+async function fetchDirect(targetUrl: string): Promise<{ html: string; finalUrl: string }> {
+  const resp = await fetch(targetUrl, {
+    redirect: "follow",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5",
+      "Accept-Encoding": "identity",
+      "Cache-Control": "no-cache",
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+
+  const contentType = resp.headers.get("content-type") ?? "text/html";
+  if (!contentType.includes("text/html")) {
+    throw new Error(`Non-HTML content type: ${contentType}`);
+  }
+
+  return { html: await resp.text(), finalUrl: resp.url || targetUrl };
 }
 
 router.get("/proxy", async (req, res): Promise<void> => {
@@ -82,86 +169,56 @@ router.get("/proxy", async (req, res): Promise<void> => {
 
   req.log.info({ targetUrl }, "Proxying request");
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  let html = "";
+  let finalUrl = targetUrl;
+  let usedCloudflare = false;
 
-  try {
-    const response = await fetch(targetUrl, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "identity",
-        "Cache-Control": "no-cache",
-      },
-    });
+  // Try Cloudflare Browser Rendering first
+  if (CF_BROWSER_URL && CF_API_TOKEN) {
+    try {
+      html = await fetchWithCloudflare(targetUrl);
+      finalUrl = targetUrl;
+      usedCloudflare = true;
+      req.log.info({ targetUrl }, "Fetched via Cloudflare Browser Rendering");
+    } catch (cfErr) {
+      req.log.warn({ err: cfErr, targetUrl }, "Cloudflare fetch failed, falling back to direct fetch");
+    }
+  }
 
-    clearTimeout(timeout);
-
-    const contentType = response.headers.get("content-type") ?? "text/html";
-    const finalUrl = response.url || targetUrl;
-
-    if (!contentType.includes("text/html")) {
-      const buffer = await response.arrayBuffer();
-      res.set("Content-Type", contentType);
-      res.set("Access-Control-Allow-Origin", "*");
-      res.send(Buffer.from(buffer));
+  // Fallback to direct fetch
+  if (!html) {
+    try {
+      const result = await fetchDirect(targetUrl);
+      html = result.html;
+      finalUrl = result.finalUrl;
+      req.log.info({ targetUrl, finalUrl }, "Fetched via direct fetch");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      req.log.error({ err, targetUrl }, "Direct fetch also failed");
+      res.status(502).json({ error: `Failed to fetch page: ${message}` });
       return;
     }
-
-    let html = await response.text();
-
-    const proxyBase = "/api/proxy";
-    html = rewriteLinks(html, finalUrl, proxyBase);
-
-    const injectedScript = `
-<script>
-(function() {
-  window.__proxyFinalUrl = ${JSON.stringify(finalUrl)};
-  if (window.parent && window.parent !== window) {
-    window.parent.postMessage({ type: 'proxy-url', url: ${JSON.stringify(finalUrl)} }, '*');
   }
-})();
-</script>`;
-    html = html.replace(/(<\/head>)/i, injectedScript + "$1");
-    if (!html.includes("</head>")) {
-      html = injectedScript + html;
-    }
 
-    const BLOCKED_HEADERS = [
-      "x-frame-options",
-      "content-security-policy",
-      "content-security-policy-report-only",
-      "permissions-policy",
-      "cross-origin-embedder-policy",
-      "cross-origin-opener-policy",
-      "cross-origin-resource-policy",
-      "strict-transport-security",
-      "x-content-type-options",
-    ];
+  html = rewriteLinks(html, finalUrl, "/api/proxy");
+  html = injectScript(html, finalUrl);
 
-    res.set("Content-Type", "text/html; charset=utf-8");
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("X-Proxy-Final-Url", finalUrl);
-    for (const h of BLOCKED_HEADERS) {
-      res.removeHeader(h);
-    }
-    res.send(html);
-  } catch (err: unknown) {
-    clearTimeout(timeout);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    req.log.error({ err, targetUrl }, "Proxy fetch failed");
-
-    if (message.includes("abort") || message.includes("AbortError")) {
-      res.status(504).json({ error: "Request timed out" });
-      return;
-    }
-    res.status(502).json({ error: `Failed to fetch: ${message}` });
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("X-Proxy-Final-Url", finalUrl);
+  res.set("X-Proxy-Engine", usedCloudflare ? "cloudflare-browser" : "direct");
+  for (const h of BLOCKED_HEADERS) {
+    res.removeHeader(h);
   }
+  res.send(html);
+});
+
+// Endpoint to check proxy status / config
+router.get("/proxy/status", (_req, res): void => {
+  res.json({
+    cloudflare: !!CF_BROWSER_URL && !!CF_API_TOKEN,
+    accountId: CF_ACCOUNT_ID ? CF_ACCOUNT_ID.slice(0, 6) + "…" : null,
+  });
 });
 
 export default router;

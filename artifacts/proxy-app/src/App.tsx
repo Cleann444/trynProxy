@@ -30,6 +30,7 @@ export default function App() {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [pageTitle, setPageTitle] = useState("");
+  const [engine, setEngine] = useState<"cloudflare-browser" | "direct" | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export default function App() {
     setStatus("loading");
     setErrorMsg("");
     setPageTitle("");
+    setEngine(null);
 
     if (pushHistory) {
       setHistory((prev) => {
@@ -111,6 +113,12 @@ export default function App() {
       const title = iframeRef.current?.contentDocument?.title;
       if (title) setPageTitle(title);
     } catch {}
+    fetch(`${BASE}/api/proxy?url=${encodeURIComponent(currentUrl)}`, { method: "HEAD" })
+      .then((r) => {
+        const eng = r.headers.get("X-Proxy-Engine");
+        if (eng === "cloudflare-browser" || eng === "direct") setEngine(eng);
+      })
+      .catch(() => {});
   };
 
   const handleIframeError = () => {
@@ -345,7 +353,13 @@ export default function App() {
               : currentUrl}
           </span>
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>
-            {status === "success" && "Proxied via WebProxy"}
+            {status === "success" && (
+              engine === "cloudflare-browser"
+                ? "⚡ Cloudflare Browser Rendering"
+                : engine === "direct"
+                ? "↗ Direct fetch"
+                : "Proxied via WebProxy"
+            )}
           </span>
         </div>
       )}
