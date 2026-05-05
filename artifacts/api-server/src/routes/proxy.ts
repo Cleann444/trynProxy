@@ -108,7 +108,6 @@ async function fetchWithCloudflare(targetUrl: string): Promise<string> {
     body: JSON.stringify({
       url: targetUrl,
       rejectResourceTypes: ["image", "media", "font"],
-      waitUntil: "networkidle0",
     }),
     signal: AbortSignal.timeout(30000),
   });
