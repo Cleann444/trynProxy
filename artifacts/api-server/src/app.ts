@@ -17,6 +17,8 @@ const logger = pinoHttp({
   }
 });
 
+export default app;
+
 app.use(logger);
 
 // Example route
