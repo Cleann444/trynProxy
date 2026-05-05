@@ -17,8 +17,6 @@ const logger = pinoHttp({
   }
 });
 
-export default app;
-
 app.use(logger);
 
 // Example route
@@ -45,3 +43,5 @@ app.use('/proxy', proxy('https://example.com', {
 app.listen(port, () => {
   console.log(`trynProxy running on port ${port}`);
 });
+
+export default app;
