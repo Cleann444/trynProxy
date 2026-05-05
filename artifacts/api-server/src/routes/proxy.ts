@@ -3,13 +3,7 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const CF_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
-const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-const CF_BROWSER_URL = CF_ACCOUNT_ID
-  ? `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/browser-rendering/content`
-  : null;
-
-const BLOCKED_HEADERS = [
+const BLOCKED_RESPONSE_HEADERS = [
   "x-frame-options",
   "content-security-policy",
   "content-security-policy-report-only",
@@ -21,143 +15,109 @@ const BLOCKED_HEADERS = [
   "x-content-type-options",
 ];
 
-// Simple in-memory cache: url -> { html, ts }
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds
-const cache = new Map<string, { html: string; ts: number }>();
+// Resource cache: url -> { body, contentType, ts }
+const CACHE_TTL: Record<string, number> = {
+  html: 30_000,
+  css: 120_000,
+  default: 300_000,
+};
 
-function getCached(url: string): string | null {
-  const entry = cache.get(url);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) {
-    cache.delete(url);
-    return null;
-  }
-  return entry.html;
+interface CacheEntry {
+  body: Buffer;
+  contentType: string;
+  ts: number;
+  kind: string;
 }
 
-function setCache(url: string, html: string): void {
-  // Keep cache from growing unbounded
-  if (cache.size > 50) {
+const cache = new Map<string, CacheEntry>();
+
+function getCached(url: string): CacheEntry | null {
+  const entry = cache.get(url);
+  if (!entry) return null;
+  const ttl = CACHE_TTL[entry.kind] ?? CACHE_TTL.default;
+  if (Date.now() - entry.ts > ttl) { cache.delete(url); return null; }
+  return entry;
+}
+
+function setCache(url: string, body: Buffer, contentType: string, kind: string): void {
+  if (cache.size > 200) {
     const oldest = [...cache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
     cache.delete(oldest[0]);
   }
-  cache.set(url, { html, ts: Date.now() });
+  cache.set(url, { body, contentType, ts: Date.now(), kind });
 }
 
-function rewriteLinks(html: string, targetUrl: string, proxyBase: string): string {
-  const url = new URL(targetUrl);
-  const origin = url.origin;
-  const proxyPrefix = `${proxyBase}?url=`;
+function proxyHref(href: string, base: string): string {
+  try {
+    const abs = new URL(href, base).href;
+    return `/api/proxy?url=${encodeURIComponent(abs)}`;
+  } catch {
+    return href;
+  }
+}
 
-  function toProxiedUrl(href: string): string {
-    try {
-      const absolute = new URL(href, targetUrl).href;
-      return proxyPrefix + encodeURIComponent(absolute);
-    } catch {
-      return href;
+function rewriteHtml(html: string, finalUrl: string): string {
+  const origin = new URL(finalUrl).origin;
+
+  // <a> and <area> stay in proxy
+  html = html.replace(
+    /(<(?:a|area)\b[^>]*?\bhref\s*=\s*)(["'])([^"']*)\2/gi,
+    (m, pre, q, href) => {
+      if (/^(javascript:|mailto:|tel:|#)/i.test(href)) return m;
+      return `${pre}${q}${proxyHref(href, finalUrl)}${q}`;
     }
+  );
+
+  // <form action> stays in proxy
+  html = html.replace(
+    /(<form\b[^>]*?\baction\s*=\s*)(["'])([^"']*)\2/gi,
+    (m, pre, q, action) => `${pre}${q}${proxyHref(action, finalUrl)}${q}`
+  );
+
+  // All src / href on resource tags → absolute (loaded by browser directly from origin)
+  html = html.replace(
+    /(<(?:script|img|source|track|input)\b[^>]*?\bsrc\s*=\s*)(["'])([^"']*)\2/gi,
+    (m, pre, q, src) => {
+      if (/^(data:|blob:|https?:|\/\/)/i.test(src)) return m;
+      try { return `${pre}${q}${new URL(src, finalUrl).href}${q}`; } catch { return m; }
+    }
+  );
+  html = html.replace(
+    /(<link\b[^>]*?\bhref\s*=\s*)(["'])([^"']*)\2/gi,
+    (m, pre, q, href) => {
+      if (/^(data:|blob:|https?:|\/\/)/i.test(href)) return m;
+      try { return `${pre}${q}${new URL(href, finalUrl).href}${q}`; } catch { return m; }
+    }
+  );
+
+  // Ensure a <base> tag so relative URLs from inline JS resolve correctly
+  if (!/<base\b/i.test(html)) {
+    html = html.replace(/(<head\b[^>]*>)/i, `$1<base href="${origin}/">`);
   }
 
-  // Rewrite <a> and <area> href to stay in proxy
-  html = html.replace(
-    /(<(?:a|area)\s[^>]*\bhref\s*=\s*)(["'])([^"']*)\2/gi,
-    (match, pre, quote, href) => {
-      if (
-        href.startsWith("javascript:") ||
-        href.startsWith("mailto:") ||
-        href.startsWith("tel:") ||
-        href.startsWith("#")
-      ) {
-        return match;
-      }
-      return `${pre}${quote}${toProxiedUrl(href)}${quote}`;
-    }
-  );
-
-  // Resolve relative asset URLs to absolute
-  html = html.replace(
-    /(<(?:link|script|img|source|input|track)\s[^>]*\b(?:src|href)\s*=\s*)(["'])([^"']*)\2/gi,
-    (match, pre, quote, src) => {
-      if (src.startsWith("data:") || src.startsWith("blob:") || src.startsWith("http")) return match;
-      try {
-        const absolute = new URL(src, targetUrl).href;
-        return `${pre}${quote}${absolute}${quote}`;
-      } catch {
-        return match;
-      }
-    }
-  );
-
-  // Rewrite form actions
-  html = html.replace(
-    /(<form\s[^>]*\baction\s*=\s*)(["'])([^"']*)\2/gi,
-    (match, pre, quote, action) => {
-      try {
-        const absolute = new URL(action, targetUrl).href;
-        return `${pre}${quote}${proxyPrefix}${encodeURIComponent(absolute)}${quote}`;
-      } catch {
-        return match;
-      }
-    }
-  );
-
-  // Inject base tag if missing
-  if (!/<base\s/i.test(html)) {
-    html = html.replace(/(<head[^>]*>)/i, `$1<base href="${origin}/">`);
-  }
+  // Inject parent-frame communication script
+  const inject = `<script>(function(){try{if(window.parent&&window.parent!==window){window.parent.postMessage({type:'proxy-url',url:location.href},'*');}}catch(e){}})();</script>`;
+  html = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, inject + "</head>") : inject + html;
 
   return html;
 }
 
-function injectScript(html: string, finalUrl: string): string {
-  const script = `<script>(function(){if(window.parent&&window.parent!==window){window.parent.postMessage({type:'proxy-url',url:${JSON.stringify(finalUrl)}},'*');}})();</script>`;
-  if (/<\/head>/i.test(html)) {
-    return html.replace(/(<\/head>)/i, script + "$1");
-  }
-  return script + html;
-}
-
-async function fetchWithCloudflare(targetUrl: string): Promise<string> {
-  if (!CF_BROWSER_URL || !CF_API_TOKEN) {
-    throw new Error("Cloudflare not configured");
-  }
-
-  const resp = await fetch(CF_BROWSER_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${CF_API_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      url: targetUrl,
-    }),
-    signal: AbortSignal.timeout(30000),
+function rewriteCss(css: string, finalUrl: string): string {
+  // Resolve relative url() references in CSS to absolute
+  return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi, (m, q, src) => {
+    if (/^(data:|blob:|https?:|\/\/)/i.test(src)) return m;
+    try { return `url(${q}${new URL(src, finalUrl).href}${q})`; } catch { return m; }
   });
-
-  if (resp.status === 429) {
-    throw new RateLimitError("Cloudflare rate limit reached — please wait a moment and try again.");
-  }
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Cloudflare Browser Rendering error ${resp.status}: ${text}`);
-  }
-
-  const data = await resp.json() as { success: boolean; result?: string; errors?: { message: string }[] };
-  if (!data.success || typeof data.result !== "string") {
-    const errMsg = data.errors?.map((e) => e.message).join(", ") ?? "Unknown error";
-    throw new Error(`Cloudflare returned failure: ${errMsg}`);
-  }
-
-  return data.result;
 }
 
-class RateLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RateLimitError";
-  }
-}
+const FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "identity",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+};
 
 router.get("/proxy", async (req, res): Promise<void> => {
   const rawUrl = req.query["url"];
@@ -171,64 +131,84 @@ router.get("/proxy", async (req, res): Promise<void> => {
     targetUrl = "https://" + targetUrl;
   }
 
-  try {
-    new URL(targetUrl);
-  } catch {
+  try { new URL(targetUrl); } catch {
     res.status(400).json({ error: "Invalid URL" });
     return;
   }
 
-  if (!CF_BROWSER_URL || !CF_API_TOKEN) {
-    res.status(503).json({ error: "Cloudflare Browser Rendering is not configured." });
-    return;
-  }
-
-  // Serve from cache if available
+  // Serve from cache
   const cached = getCached(targetUrl);
   if (cached) {
-    req.log.info({ targetUrl }, "Serving from cache");
-    res.set("Content-Type", "text/html; charset=utf-8");
+    for (const h of BLOCKED_RESPONSE_HEADERS) res.removeHeader(h);
+    res.set("Content-Type", cached.contentType);
     res.set("Access-Control-Allow-Origin", "*");
-    res.set("X-Proxy-Final-Url", targetUrl);
-    res.set("X-Proxy-Engine", "cloudflare-browser");
     res.set("X-Proxy-Cache", "HIT");
-    for (const h of BLOCKED_HEADERS) res.removeHeader(h);
-    res.send(cached);
+    res.send(cached.body);
     return;
   }
 
-  req.log.info({ targetUrl }, "Fetching via Cloudflare Browser Rendering");
-
-  let html = "";
+  let response: Response;
   try {
-    html = await fetchWithCloudflare(targetUrl);
+    response = await fetch(targetUrl, {
+      redirect: "follow",
+      headers: FETCH_HEADERS,
+      signal: AbortSignal.timeout(15000),
+    });
   } catch (err) {
-    const isRateLimit = err instanceof RateLimitError;
-    const message = err instanceof Error ? err.message : "Unknown error";
-    req.log.error({ err, targetUrl }, "Cloudflare fetch failed");
-    res.status(isRateLimit ? 429 : 502).json({ error: message });
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    req.log.error({ err, targetUrl }, "Proxy fetch failed");
+    res.status(502).json({ error: `Failed to reach ${targetUrl}: ${msg}` });
     return;
   }
 
-  html = rewriteLinks(html, targetUrl, "/api/proxy");
-  html = injectScript(html, targetUrl);
-  setCache(targetUrl, html);
+  const finalUrl = response.url || targetUrl;
+  const rawContentType = response.headers.get("content-type") ?? "application/octet-stream";
+  const isHtml = rawContentType.includes("text/html");
+  const isCss = rawContentType.includes("text/css");
+  const isText = isHtml || isCss || rawContentType.includes("text/");
 
-  res.set("Content-Type", "text/html; charset=utf-8");
+  let bodyBuffer: Buffer;
+  try {
+    bodyBuffer = Buffer.from(await response.arrayBuffer());
+  } catch (err) {
+    req.log.error({ err, targetUrl }, "Failed to read response body");
+    res.status(502).json({ error: "Failed to read response from target" });
+    return;
+  }
+
+  let contentType = rawContentType;
+
+  if (isHtml) {
+    let html = bodyBuffer.toString("utf-8");
+    html = rewriteHtml(html, finalUrl);
+    bodyBuffer = Buffer.from(html, "utf-8");
+    contentType = "text/html; charset=utf-8";
+    setCache(targetUrl, bodyBuffer, contentType, "html");
+  } else if (isCss) {
+    let css = bodyBuffer.toString("utf-8");
+    css = rewriteCss(css, finalUrl);
+    bodyBuffer = Buffer.from(css, "utf-8");
+    setCache(targetUrl, bodyBuffer, contentType, "css");
+  } else {
+    setCache(targetUrl, bodyBuffer, contentType, "default");
+  }
+
+  for (const h of BLOCKED_RESPONSE_HEADERS) res.removeHeader(h);
+  res.set("Content-Type", contentType);
+  res.set("Content-Length", String(bodyBuffer.length));
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("X-Proxy-Final-Url", targetUrl);
-  res.set("X-Proxy-Engine", "cloudflare-browser");
   res.set("X-Proxy-Cache", "MISS");
-  for (const h of BLOCKED_HEADERS) res.removeHeader(h);
-  res.send(html);
+  res.set("X-Proxy-Engine", "direct");
+  if (!isText) {
+    res.set("Cache-Control", "public, max-age=3600");
+  }
+
+  req.log.info({ targetUrl, finalUrl, status: response.status }, "Proxied");
+  res.status(response.status).send(bodyBuffer);
 });
 
 router.get("/proxy/status", (_req, res): void => {
-  res.json({
-    cloudflare: !!CF_BROWSER_URL && !!CF_API_TOKEN,
-    accountId: CF_ACCOUNT_ID ? CF_ACCOUNT_ID.slice(0, 6) + "…" : null,
-    cacheSize: cache.size,
-  });
+  res.json({ engine: "direct", cacheSize: cache.size });
 });
 
 export default router;
