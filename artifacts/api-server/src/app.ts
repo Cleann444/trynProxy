@@ -1,44 +1,22 @@
-import express, { Request, Response } from 'express';
-import pino from 'pino-http';
-import proxy from 'express-http-proxy';
+import express, { type Request, type Response } from 'express';
+import pinoHttp from 'pino-http';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { logger } from './lib/logger';
+import router from './routes/index';
 
 const app = express();
-const port = process.env.PORT || 3000;
 
-const logger = pino({
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname'
-    }
-  }
-});
+app.use(pinoHttp({ logger }));
+app.use(cors({ origin: '*' }));
+app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use(logger);
+app.use('/api', router);
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'trynProxy is running' });
-});
-
-app.use('/proxy', proxy('https://example.com', {
-  proxyReqPathResolver: (req: Request) => {
-    const targetUrl = req.query.url as string;
-    if (targetUrl) {
-      try {
-        const url = new URL(targetUrl);
-        return url.pathname + url.search;
-      } catch {
-        return '/';
-      }
-    }
-    return '/';
-  }
-}));
-
-app.listen(port, () => {
-  console.log(`trynProxy running on port ${port}`);
 });
 
 export default app;

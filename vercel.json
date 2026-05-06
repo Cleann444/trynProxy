@@ -1,11 +1,21 @@
 {
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "framework": null,
-  "outputDirectory": "artifacts",
+  "version": 2,
+  "installCommand": "npm install -g pnpm@8.15.0 && pnpm install --frozen-lockfile=false",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "artifacts/proxy-app/dist/public",
   "functions": {
-    "dist/index.mjs": {
+    "artifacts/api-server/dist/index.mjs": {
       "runtime": "nodejs22.x"
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "artifacts/api-server/dist/index.mjs"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
 }

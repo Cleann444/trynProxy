@@ -4,7 +4,8 @@ type Theme = "dark" | "light";
 type Status = "idle" | "loading" | "success" | "error";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const WORKER_URL = "https://web-proxy.sharifibrahim.workers.dev";
+// Use our own CBP-backed api-server proxy endpoint
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 function normalizeUrl(input: string): string {
   const trimmed = input.trim();
@@ -14,7 +15,7 @@ function normalizeUrl(input: string): string {
 }
 
 function proxyUrl(url: string): string {
-  return `${WORKER_URL}/?url=${encodeURIComponent(url)}`;
+  return `${API_BASE}/api/proxy?url=${encodeURIComponent(url)}`;
 }
 
 export default function App() {
@@ -350,7 +351,7 @@ export default function App() {
               : currentUrl}
           </span>
           <span style={{ marginLeft: "auto", flexShrink: 0 }}>
-            {status === "success" && "⚡ Cloudflare Edge"}
+            {status === "success" && "⚡ Tryn CBP"}
           </span>
         </div>
       )}
