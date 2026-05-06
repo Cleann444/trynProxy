@@ -1,5 +1,11 @@
 {
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "framework": null
+  "framework": null,
+  "outputDirectory": "artifacts",
+  "functions": {
+    "dist/index.mjs": {
+      "runtime": "nodejs22.x"
+    }
+  }
 }

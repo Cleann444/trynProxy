@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_vN25ZerT04udPv9rvQ7MjitZeDMX",
+  "orgId": "team_byZ0zr9zu2JNX9pqfZGyTfi6",
+  "projectName": "tryn-proxy",
+  "settings": {
+    "createdAt": 1778010112909,
+    "framework": "express",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": "artifacts/api-server",
+    "directoryListing": true,
+    "nodeVersion": "24.x"
+  }
+}
