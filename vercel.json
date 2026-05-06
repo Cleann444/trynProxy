@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "npm install -g pnpm@8.15.0 && pnpm install --frozen-lockfile=false",
+  "installCommand": "npm install -g pnpm@10 && pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm run build",
   "outputDirectory": "artifacts/proxy-app/dist/public",
   "functions": {
