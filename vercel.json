@@ -1,21 +1,5 @@
 {
-  "version": 2,
-  "installCommand": "npm install -g pnpm@10 && pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "artifacts/proxy-app/dist/public",
-  "functions": {
-    "artifacts/api-server/dist/index.mjs": {
-      "runtime": "nodejs22.x"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "artifacts/api-server/dist/index.mjs"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ]
+  "buildCommand": "cd artifacts/proxy-app && npm install && npm run build",
+  "outputDirectory": "artifacts/proxy-app/dist",
+  "framework": null
 }

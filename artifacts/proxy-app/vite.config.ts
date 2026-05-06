@@ -5,28 +5,15 @@ import path from "path";
 
 export default defineConfig({
   base: "/",
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
     },
     dedupe: ["react", "react-dom"],
   },
-  root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: "dist",
     emptyOutDir: true,
-  },
-  server: {
-    port: 5173,
-    strictPort: true,
-    host: "0.0.0.0",
-  },
-  preview: {
-    port: 5173,
-    host: "0.0.0.0",
   },
 });
