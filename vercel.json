@@ -1,0 +1,11 @@
+{
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "framework": null,
+  "outputDirectory": "artifacts",
+  "functions": {
+    "dist/index.mjs": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}
