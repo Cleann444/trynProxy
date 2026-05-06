@@ -226,7 +226,7 @@ async function proxyRequest(req: Request, res: Response, targetUrl: string): Pro
       : "application/json, */*";
   }
 
-  let body: BodyInit | undefined;
+  let body: any | undefined;
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method) && req.body) {
     const ct = (req.headers["content-type"] ?? "").toLowerCase();
     if (ct.includes("application/json")) {
