@@ -1,6 +1,6 @@
 {
-  "installCommand": "cd artifacts/proxy-app && npm install",
-  "buildCommand": "cd artifacts/proxy-app && npm run build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/proxy-app run build",
   "outputDirectory": "artifacts/proxy-app/dist",
   "framework": null,
   "rewrites": [
