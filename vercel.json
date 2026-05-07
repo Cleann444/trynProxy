@@ -2,5 +2,8 @@
   "installCommand": "cd artifacts/proxy-app && npm install",
   "buildCommand": "cd artifacts/proxy-app && npm run build",
   "outputDirectory": "artifacts/proxy-app/dist",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" }
+  ]
 }

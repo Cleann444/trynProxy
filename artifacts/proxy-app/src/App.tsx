@@ -4,7 +4,6 @@ type Theme = "dark" | "light";
 type Status = "idle" | "loading" | "success" | "error";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const WORKER_URL = import.meta.env.VITE_CBP_URL ?? "";
 
 function normalizeUrl(input: string): string {
   const trimmed = input.trim();
@@ -14,7 +13,7 @@ function normalizeUrl(input: string): string {
 }
 
 function proxyUrl(url: string): string {
-  return `${WORKER_URL}/?url=${encodeURIComponent(url)}`;
+  return `/api/proxy?url=${encodeURIComponent(url)}`;
 }
 
 export default function App() {
