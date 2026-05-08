@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrynProxy — Private Encrypted Browser</title>
+  <meta name="description" content="A fully encrypted, privacy-first web proxy powered by Cloudflare Workers. All traffic is AES-256-GCM encrypted end-to-end." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+<!-- Loading bar -->
+<div id="loading-bar"></div>
+
+<!-- Toolbar -->
+<header id="toolbar">
+  <span class="logo">tryn<span style="opacity:.6">Proxy</span></span>
+
+  <!-- Back -->
+  <button class="nav-btn" id="back-btn" title="Back" aria-label="Back">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <!-- Forward -->
+  <button class="nav-btn" id="fwd-btn" title="Forward" aria-label="Forward">
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <!-- Refresh -->
+  <button class="nav-btn" id="refresh-btn" title="Refresh" aria-label="Refresh">
+    <svg viewBox="0 0 24 24">
+      <polyline points="23 4 23 10 17 10"/>
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+  </button>
+
+  <!-- URL bar -->
+  <div id="url-wrap">
+    <span class="lock-icon" title="AES-256-GCM Encrypted">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </span>
+    <input
+      id="url-bar"
+      type="text"
+      placeholder="Enter a URL and press Go…"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      aria-label="URL"
+    />
+  </div>
+
+  <button id="go-btn">Go</button>
+</header>
+
+<!-- Status bar -->
+<div id="statusbar">
+  <span class="enc-badge" title="All requests are AES-256-GCM encrypted">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    AES-256-GCM
+  </span>
+  <span id="addr-display">—</span>
+  <span id="status-msg">Ready</span>
+</div>
+
+<!-- Viewport -->
+<div id="frame-wrap">
+  <!-- Welcome screen -->
+  <div id="welcome">
+    <div class="welcome-logo">trynProxy</div>
+    <p class="welcome-sub">
+      Private, encrypted web browsing via Cloudflare Workers.<br/>
+      Your requests are end-to-end encrypted — the server never sees plain URLs.
+    </p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="icon">🔒</span>
+        <span class="label">AES-256-GCM</span>
+        <span class="desc">Every request and response is fully encrypted</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">⚡</span>
+        <span class="label">Heat Cache</span>
+        <span class="desc">Popular pages load faster with adaptive TTLs</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">🌐</span>
+        <span class="label">HTML Rewrite</span>
+        <span class="desc">Links stay inside the proxy seamlessly</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">🔑</span>
+        <span class="label">Rotating Keys</span>
+        <span class="desc">Keys rotate every 10 minutes automatically</span>
+      </div>
+    </div>
+  </div>
+
+  <iframe
+    id="proxy-frame"
+    sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+    title="Proxied content"
+  ></iframe>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+<script>
+  // Hide welcome screen on first navigation
+  const frame = document.getElementById('proxy-frame');
+  const welcome = document.getElementById('welcome');
+  const goBtn = document.getElementById('go-btn');
+  goBtn.addEventListener('click', () => { welcome.classList.add('hidden'); }, { once: true });
+  document.getElementById('url-bar').addEventListener('keydown', e => {
+    if (e.key === 'Enter') welcome.classList.add('hidden');
+  }, { once: true });
+</script>
+
+</body>
+</html>
