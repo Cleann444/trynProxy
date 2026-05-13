@@ -1,8 +1,7 @@
 import { proxyFetch } from './crypto.js';
 
 // ─── Config (injected at build time via Vite env vars) ────────────────────────
-const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://cbp-v2.YOURNAME.workers.dev';
-const SECRET     = import.meta.env.VITE_PROXY_SECRET || 'CHANGE_ME_SAME_AS_WORKER_SECRET';
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://cbp-splash.up.railway.app/api/proxy';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentUrl  = '';
@@ -29,7 +28,7 @@ async function navigate(url) {
   setStatus('Fetching & Decrypting…');
 
   try {
-    const result = await proxyFetch(WORKER_URL, SECRET, url);
+    const result = await proxyFetch(WORKER_URL, url);
     const { status, headers, bodyBase64, finalUrl } = result;
 
     const ct   = headers?.['content-type'] || '';
