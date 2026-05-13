@@ -7,6 +7,7 @@ const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'https://cbp-splash.up.rai
 let currentUrl  = '';
 let history     = [];
 let isLoading   = false;
+let currentBlobUrl = null;
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const urlBar      = document.getElementById('url-bar');
@@ -18,6 +19,14 @@ const frame       = document.getElementById('proxy-frame');
 const statusEl    = document.getElementById('status-msg');
 const loadingBar  = document.getElementById('loading-bar');
 const addrDisplay = document.getElementById('addr-display');
+
+// ─── Render HTML into iframe via blob URL (avoids X-Frame-Options entirely) ──
+function renderInFrame(html) {
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  currentBlobUrl = URL.createObjectURL(blob);
+  frame.src = currentBlobUrl;
+}
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 async function navigate(url) {
@@ -35,15 +44,16 @@ async function navigate(url) {
     const body = atob(bodyBase64);
 
     if (ct.includes('text/html')) {
-      // Write into iframe
-      const doc = frame.contentDocument || frame.contentWindow.document;
-      doc.open();
       const baseUrl = finalUrl || url;
+
       const interceptScript = `
         <base href="${baseUrl}">
         <script>
+          // Neutralize frame-busting
+          try { if (window.top !== window.self) { Object.defineProperty(window, 'top', { get: function() { return window.self; } }); } } catch(e) {}
+
           document.addEventListener('click', function(e) {
-            const a = e.target.closest('a');
+            var a = e.target.closest('a');
             if (a && a.href && !a.href.startsWith('javascript:')) {
               e.preventDefault();
               window.parent.postMessage({type: 'cbp-nav', url: a.href}, '*');
@@ -51,38 +61,38 @@ async function navigate(url) {
           }, true);
           document.addEventListener('submit', function(e) {
             e.preventDefault();
-            const form = e.target;
+            var form = e.target;
             if (form.method.toLowerCase() === 'get') {
-              const u = new URL(form.action);
-              const fd = new FormData(form);
-              for (const [k, v] of fd) u.searchParams.append(k, v);
+              var u = new URL(form.action);
+              var fd = new FormData(form);
+              for (var pair of fd) u.searchParams.append(pair[0], pair[1]);
               window.parent.postMessage({type: 'cbp-nav', url: u.href}, '*');
             }
           }, true);
-        </script>
+        <\/script>
       `;
+
       let outHtml = body;
+      // Strip frame-busting meta tags
+      outHtml = outHtml.replace(/<meta[^>]*http-equiv\s*=\s*["']?X-Frame-Options["']?[^>]*>/gi, '');
+
       if (/<head[^>]*>/i.test(outHtml)) {
-        outHtml = outHtml.replace(/(<head[^>]*>)/i, '$1\\n' + interceptScript);
+        outHtml = outHtml.replace(/(<head[^>]*>)/i, '$1\n' + interceptScript);
       } else {
         outHtml = interceptScript + outHtml;
       }
-      doc.write(outHtml);
-      doc.close();
+
+      renderInFrame(outHtml);
+
       currentUrl = baseUrl;
       urlBar.value = currentUrl;
       addrDisplay.textContent = currentUrl;
       history.push(currentUrl);
       setStatus(`${status} — ${ct}`);
     } else if (ct.includes('application/json') || ct.includes('text/')) {
-      // Display as text
-      const doc = frame.contentDocument || frame.contentWindow.document;
-      doc.open();
-      doc.write(`<pre style="font-family:monospace;padding:1rem;white-space:pre-wrap;">${escHtml(body)}</pre>`);
-      doc.close();
+      renderInFrame(`<pre style="font-family:monospace;padding:1rem;white-space:pre-wrap;">${escHtml(body)}</pre>`);
       setStatus(`${status} — ${ct}`);
     } else {
-      // Binary: offer download
       const blob = new Blob([Uint8Array.from(body, c => c.charCodeAt(0))], { type: ct });
       const a    = document.createElement('a');
       a.href     = URL.createObjectURL(blob);
@@ -92,12 +102,9 @@ async function navigate(url) {
     }
   } catch (e) {
     setStatus('Error: ' + e.message);
-    const doc = frame.contentDocument || frame.contentWindow.document;
-    doc.open();
-    doc.write(`<div style="padding:2rem;font-family:sans-serif;color:#f55">
+    renderInFrame(`<div style="padding:2rem;font-family:sans-serif;color:#f55">
       <h2>Proxy Error</h2><p>${escHtml(e.message)}</p>
     </div>`);
-    doc.close();
   } finally {
     setLoading(false);
   }
