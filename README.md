@@ -5,19 +5,12 @@
 # 
 
 # |  Feature                          |   Why This Helps.                                                 |
-
 # |-----------------------------------|-------------------------------------------------------------------|
-
 # | Proxied Websocket Connections.    | Allows Tryn to bypass even the most Secure Filters                |
-
 # | CloudFlare worker Secondary Proxy.| Tells filters that Tryn's connections are just cloudflare packets.|
-
 # | <400ms Load times                 | We all know ts is needed.                                         |
-
 # | Active Development                | Multiple updates arriving soon. Stay tuned.                       |
-
 # | Lightweight Architecture          | Minimal resource consumption while maintaining full functionality |
-
 # | Cross-Browser Support             | Works on Chrome, Firefox, Edge, and all major browsers            |
 
 # 
@@ -81,19 +74,12 @@
 # 
 
 # |  Adding next.                     |   Why im adding it.                                               |
-
 # |-----------------------------------|-------------------------------------------------------------------|
-
 # | SSL Encryption and Certificates   | Allows Tryn to bypass even the most Secure Filters                |
-
 # | (DONE) Use my own worker and proxy| Chudflare is shit, 10 minutes of browser rendering free limit pmo.|
-
 # | Optimize Load times               | We all know ts is needed lol.                                     |
-
 # | Active Development                | Multiple updates arriving soon. Stay tuned.                       |
-
 # | More malicous stuff (Packet Gen.) | IYKYK (these packets are completely untraceable. Not done coding.)|
-
 # | Designing new proxy protocols.    | cbp-splash and cbp-v1/2/3 are all not using SSL. Will be added.   |
 
 # 
